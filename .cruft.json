@@ -1,0 +1,20 @@
+{
+  "template": "https://github.com/PrefectHQ/prefect-collection-template",
+  "commit": "008e0473a06186c9608d26f6288810f46d4509e2",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "full_name": "William Fedder",
+      "email": "fedderw@gmail.com",
+      "github_organization": "fedderw",
+      "collection_name": "prefect-transitscope-baltimore-pipeline",
+      "collection_slug": "prefect_transitscope_baltimore_pipeline",
+      "collection_short_description": "A prefect collection to handle data uploads to transitscope-baltimore",
+      "_copy_without_render": [
+        ".github/workflows/*.yml"
+      ],
+      "_template": "https://github.com/PrefectHQ/prefect-collection-template"
+    }
+  },
+  "directory": null
+}
