@@ -1,44 +1,8 @@
 import asyncio
 from pyppeteer import launch
-import tqdm
+from tqdm import tqdm
 import pandas as pd
 from io import StringIO
-
-
-# async def computeCsvStringFromTable(page, tableSelector, shouldIncludeRowHeaders):
-#     # Extracting CSV string from a table element
-#     csvString = await page.evaluate('''(tableSelector, shouldIncludeRowHeaders) => {
-#         const table = document.querySelector(tableSelector);
-#         if (!table) {
-#             return null;
-#         }
-        
-#         let csvString = "";
-#         for (let i = 0; i < table.rows.length; i++) {
-#             const row = table.rows[i];
-
-#             if (!shouldIncludeRowHeaders && i === 0) {
-#                 continue;
-#             }
-
-#             for (let j = 0; j < row.cells.length; j++) {
-#                 const cell = row.cells[j];
-#                 const formattedCellText = cell.innerText.replace(/\n/g, '\\n').trim();
-#                 if (formattedCellText !== "No Data") {
-#                     csvString += formattedCellText;
-#                 }
-                
-#                 if (j === row.cells.length - 1) {
-#                     csvString += "\\n";
-#                 } else {
-#                     csvString += ",";
-#                 }
-#             }
-#         }
-#         return csvString;
-#     }''', tableSelector, shouldIncludeRowHeaders)
-
-#     return csvString
 
 async def computeCsvStringFromTable(page, tableSelector, shouldIncludeRowHeaders):
     # Extracting CSV string from a table element
@@ -75,7 +39,7 @@ async def computeCsvStringFromTable(page, tableSelector, shouldIncludeRowHeaders
 
     return csvString
 
-async def main():
+async def scrape():
     # Launching the browser and setting up a new page
     browser = await launch()
     page = await browser.newPage()
@@ -106,17 +70,17 @@ async def main():
 
     # Looping through options to generate CSV data
     hasIncludedRowHeaders = True
-    for yearSelectOption in yearSelectOptions:
+    for yearSelectOption in tqdm(yearSelectOptions):
         await page.focus(yearSelectSelector)
         await page.select(yearSelectSelector, yearSelectOption)
         # Printing the selected option
-        print(f"Selected year: {yearSelectOption}")
+        # print(f"Selected year: {yearSelectOption}")
 
-        for monthSelectOption in monthSelectOptions:
+        for monthSelectOption in tqdm(monthSelectOptions):
             await page.focus(monthSelectSelector)
             await page.select(monthSelectSelector, monthSelectOption)
             # Printing the selected option
-            print(f"Selected month: {monthSelectOption}")
+            # print(f"Selected month: {monthSelectOption}")
             await page.keyboard.press("Tab")
             await page.keyboard.press("Tab")
 
@@ -156,4 +120,4 @@ async def main():
  
 
 # Executing the main function
-asyncio.get_event_loop().run_until_complete(main())
+asyncio.get_event_loop().run_until_complete(scrape())
