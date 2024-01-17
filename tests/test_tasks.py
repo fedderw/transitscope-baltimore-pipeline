@@ -81,7 +81,7 @@ async def test_computeCsvStringFromTable_with_headers():
     should_include_row_headers = True
 
     # Act
-    result = await computeCsvStringFromTable(
+    result = await computeCsvStringFromTable.fn(
         mock_page, table_selector, should_include_row_headers
     )
 
@@ -103,7 +103,7 @@ async def test_computeCsvStringFromTable_without_headers():
     should_include_row_headers = False
 
     # Act
-    result = await computeCsvStringFromTable(
+    result = await computeCsvStringFromTable.fn(
         mock_page, table_selector, should_include_row_headers
     )
 
@@ -161,13 +161,13 @@ def mock_requests_get():
 
 
 def test_download_mta_bus_stops_success(mock_requests_get):
-    result = download_mta_bus_stops()
+    result = download_mta_bus_stops.fn()
     assert "Test Description" in result["data_source_description"].values
 
 
 def test_download_mta_bus_stops_failure(mock_requests_get):
     mock_requests_get.return_value.status_code = 404
-    result = download_mta_bus_stops()
+    result = download_mta_bus_stops.fn()
     assert (
         "No description available" in result["data_source_description"].values
     )
@@ -182,7 +182,7 @@ def test_transform_mta_bus_stops():
             "routes_served": ["CityLink Gold, BL, 100"],
         }
     )
-    result = transform_mta_bus_stops(test_gdf)
+    result = transform_mta_bus_stops.fn(test_gdf)
     assert all(
         x in result.columns for x in ["latitude", "longitude", "routes_served"]
     )
