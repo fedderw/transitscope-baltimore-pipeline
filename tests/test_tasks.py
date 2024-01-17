@@ -81,7 +81,7 @@ async def test_computeCsvStringFromTable_with_headers():
     should_include_row_headers = True
 
     # Act
-    result = await computeCsvStringFromTable.fn(
+    result = await computeCsvStringFromTable(
         mock_page, table_selector, should_include_row_headers
     )
 
@@ -103,7 +103,7 @@ async def test_computeCsvStringFromTable_without_headers():
     should_include_row_headers = False
 
     # Act
-    result = await computeCsvStringFromTable.fn(
+    result = await computeCsvStringFromTable(
         mock_page, table_selector, should_include_row_headers
     )
 
@@ -130,9 +130,9 @@ def test_standardize_column_names():
 # Test for format_bus_routes function
 def test_format_bus_routes():
     # Test string for bus routes
-    bus_routes_str = "CityLink GOLD, CityLink BLUE, regular route"
+    bus_routes_str = "CityLink GOLD, CityLink BLUE, 100"
     # Expected output
-    expected_output = "CityLink Gold, CityLink Blue, Regular Route"
+    expected_output = "CityLink Gold, CityLink Blue, 100"
     # Assert that bus routes are formatted correctly
     assert format_bus_routes(bus_routes_str) == expected_output
 
