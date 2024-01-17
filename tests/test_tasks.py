@@ -93,6 +93,7 @@ def test_computeCsvStringFromTable_with_headers():
     assert result == "header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
 
 
+@pytest.mark.asyncio
 async def test_computeCsvStringFromTable_without_headers():
     # Arrange
     mock_page = Mock()
