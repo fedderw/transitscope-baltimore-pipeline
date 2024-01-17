@@ -302,6 +302,7 @@ def download_mta_bus_stops():
         print("Description from Metadata:", description)
     else:
         print("Failed to retrieve metadata")
+        description = "No description available"
 
     stops = gpd.read_file(
         "https://geodata.md.gov/imap/rest/services/Transportation/MD_Transit/FeatureServer/9/query?where=1%3D1&outFields=*&outSR=4326&f=geojson"

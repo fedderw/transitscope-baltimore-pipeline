@@ -165,7 +165,7 @@ def mock_requests_get():
 def test_download_mta_bus_stops_success(mock_requests_get):
     result = download_mta_bus_stops.fn()
     first_description = result["data_source_description"].values[0]
-    assert len(first_description) > 0
+    assert first_description == "No description available"
 
 
 def test_download_mta_bus_stops_failure(mock_requests_get):
