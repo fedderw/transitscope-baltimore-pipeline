@@ -1,9 +1,18 @@
 """This is an example flows module"""
-from prefect import flow
 import asyncio
-from prefect_transitscope_baltimore_pipeline.tasks import scrape
 
+from prefect import flow
 
+from prefect_transitscope_baltimore_pipeline.tasks import (
+    # hello_prefect_transitscope_baltimore_pipeline,
+    # goodbye_prefect_transitscope_baltimore_pipeline,
+    scrape,
+    standardize_column_names_task,
+    format_bus_routes_task,
+    convert_date_and_calculate_end_of_month,
+    exclude_zero_ridership,
+    calculate_days_and_daily_ridership,
+)
 
 # @flow
 # def hello_and_goodbye():
@@ -18,15 +27,21 @@ from prefect_transitscope_baltimore_pipeline.tasks import scrape
 #     print(goodbye_prefect_transitscope_baltimore_pipeline())
 #     return "Done"
 
+
 @flow
-def scrape_and_compute_csv():
+async def scrape_and_transform_bus_route_ridership():
     # Executing the main function
-    # asyncio.get_event_loop().run_until_complete(scrape())
-    scrape()
+    bus_ridership_data = await scrape()
+    bus_ridership_data = standardize_column_names_task(bus_ridership_data)
+    bus_ridership_data = format_bus_routes_task(bus_ridership_data)
+    bus_ridership_data = convert_date_and_calculate_end_of_month(
+        bus_ridership_data
+    )
+    bus_ridership_data = exclude_zero_ridership(bus_ridership_data)
+    bus_ridership_data = calculate_days_and_daily_ridership(bus_ridership_data)
+    print(bus_ridership_data.head())
 
 
 if __name__ == "__main__":
     # hello_and_goodbye()
-    # asyncio.run(scrape_and_compute_csv())
-    scrape_and_compute_csv()
-    asyncio.get_event_loop().run_until_complete(scrape_and_compute_csv())
+    asyncio.run(scrape_and_transform_bus_route_ridership())

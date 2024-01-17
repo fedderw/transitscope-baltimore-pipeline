@@ -1,10 +1,13 @@
 """This is an example tasks module"""
-from prefect import task
 import asyncio
+from io import StringIO
+import re
+import pandas as pd
+from prefect import task
 from pyppeteer import launch
 from tqdm import tqdm
-import pandas as pd
-from io import StringIO
+import calendar
+import datetime as dt
 
 
 @task
@@ -29,10 +32,12 @@ def goodbye_prefect_transitscope_baltimore_pipeline() -> str:
     return "Goodbye, prefect-transitscope-baltimore-pipeline!"
 
 
-
-async def computeCsvStringFromTable(page, tableSelector, shouldIncludeRowHeaders):
+async def computeCsvStringFromTable(
+    page, tableSelector, shouldIncludeRowHeaders
+):
     # Extracting CSV string from a table element
-    csvString = await page.evaluate(r'''(tableSelector, shouldIncludeRowHeaders) => {
+    csvString = await page.evaluate(
+        r"""(tableSelector, shouldIncludeRowHeaders) => {
         const table = document.querySelector(tableSelector);
         if (!table) {
             return null;
@@ -61,92 +66,180 @@ async def computeCsvStringFromTable(page, tableSelector, shouldIncludeRowHeaders
             }
         }
         return csvString;
-    }''', tableSelector, shouldIncludeRowHeaders)
+    }""",
+        tableSelector,
+        shouldIncludeRowHeaders,
+    )
 
     return csvString
+
 
 @task
 async def scrape():
     # Launching the browser and setting up a new page
-    browser = await launch()
+    browser = await launch(
+        handleSIGINT=False, handleSIGTERM=False, handleSIGHUP=False
+    )
+
     page = await browser.newPage()
-    await page.setViewport({'width': 1920, 'height': 1080})
-    await page.goto('https://www.mta.maryland.gov/performance-improvement')
+    await page.setViewport({"width": 1920, "height": 1080})
+    await page.goto("https://www.mta.maryland.gov/performance-improvement")
 
     # Interacting with elements on the page
-    await page.click('h3#ui-id-5')
+    await page.click("h3#ui-id-5")
     csvString = ""
 
     # Selecting and processing data from dropdown options
     routeSelectSelector = 'select[name="ridership-select-route"]'
-    routeSelectOptions = await page.evaluate('''() => Array.from(document.querySelectorAll('select[name="ridership-select-route"] option')).map(option => option.value)''')
+    routeSelectOptions = await page.evaluate(
+        """() => Array.from(document.querySelectorAll('select[name="ridership-select-route"] option')).map(option => option.value)"""
+    )
     print(f"Route select options: {routeSelectOptions}")
 
-
     monthSelectSelector = 'select[name="ridership-select-month"]'
-    monthSelectOptions = await page.evaluate('''() => Array.from(document.querySelectorAll('select[name="ridership-select-month"] option')).map(option => option.value)''')
+    monthSelectOptions = await page.evaluate(
+        """() => Array.from(document.querySelectorAll('select[name="ridership-select-month"] option')).map(option => option.value)"""
+    )
     print(f"Month select options: {monthSelectOptions}")
 
     yearSelectSelector = 'select[name="ridership-select-year"]'
-    yearSelectOptions = await page.evaluate('''() => Array.from(document.querySelectorAll('select[name="ridership-select-year"] option')).map(option => option.value)''')
+    yearSelectOptions = await page.evaluate(
+        """() => Array.from(document.querySelectorAll('select[name="ridership-select-year"] option')).map(option => option.value)"""
+    )
     print(f"Year select options: {yearSelectOptions}")
     # Now, we need to click on the 'submit' button to get the data
     # example: <button class="btn btn-default btn-submit btn-ridership" type="submit" name="submit">Submit</button>
     # await page.click('button.btn.btn-default.btn-submit.btn-ridership')
-    
 
     # Looping through options to generate CSV data
     hasIncludedRowHeaders = True
-    for yearSelectOption in tqdm(yearSelectOptions):
+    for yearSelectOption in tqdm(
+        yearSelectOptions, position=0, leave=False, desc="Years"
+    ):
         await page.focus(yearSelectSelector)
         await page.select(yearSelectSelector, yearSelectOption)
-        # Printing the selected option
-        # print(f"Selected year: {yearSelectOption}")
 
-        for monthSelectOption in tqdm(monthSelectOptions):
+        for monthSelectOption in tqdm(
+            monthSelectOptions, position=1, leave=False, desc="Months"
+        ):
             await page.focus(monthSelectSelector)
             await page.select(monthSelectSelector, monthSelectOption)
             # Printing the selected option
-            # print(f"Selected month: {monthSelectOption}")
+            # tqdm.write(f"Selected month: {monthSelectOption}")
             await page.keyboard.press("Tab")
             await page.keyboard.press("Tab")
 
             # Waiting for network responses after form submission
             await asyncio.gather(
                 # page.keyboard.press('Enter'),
-                page.click('button.btn.btn-default.btn-submit.btn-ridership'),
+                page.click("button.btn.btn-default.btn-submit.btn-ridership"),
                 # Wait for 1 second after clicking the button
                 page.waitFor(500),
                 # page.waitForNavigation(),
                 # page.waitForNavigation({'waitUntil': 'networkidle2', 'timeout': 30000})  # 30 seconds
-                # Just waiting for navigation is not enough, as the page may not be fully loaded. To 
+                # Just waiting for navigation is not enough, as the page may not be fully loaded. To
             )
             # navigationPromise = async.ensure_future(page.waitForNavigation())
             # await page.click('a.my-link')  # indirectly cause a navigation
             # await navigationPromise  # wait until navigation finishes
 
-
-
-
             # Concatenating CSV string for each selection
-            csvString += await computeCsvStringFromTable(page, 'div#container-ridership-table > table', hasIncludedRowHeaders)
+            csvString += await computeCsvStringFromTable(
+                page,
+                "div#container-ridership-table > table",
+                hasIncludedRowHeaders,
+            )
 
             if hasIncludedRowHeaders:
                 hasIncludedRowHeaders = False
 
     # Closing the browser
     await browser.close()
-    
+
     # Converting the CSV string to a pandas dataframe
     df = pd.read_csv(StringIO(csvString))
-    
 
     # Writing the CSV string to a file
     # with open("mta_bus_ridership.csv", "w") as file:
     #     file.write(csvString)
-    
-    return df
- 
 
-# Executing the main function
-# asyncio.get_event_loop().run_until_complete(scrape())
+    return df
+
+
+def standardize_column_names(data_frame):
+    """Standardize DataFrame column names to lowercase with underscores."""
+    data_frame.columns = (
+        data_frame.columns.str.strip().str.lower().str.replace(" ", "_")
+    )
+    return data_frame
+
+
+def format_bus_routes(bus_routes_str):
+    """Format bus route strings, capitalizing CityLink routes."""
+    citylink_pattern = re.compile("CityLink ([A-Z]+)")
+    formatted_routes = [
+        citylink_pattern.sub(
+            lambda match: "CityLink " + match.group(1).title(),
+            route.strip(),
+        )
+        for route in bus_routes_str.split(",")
+    ]
+    return ", ".join(formatted_routes)
+
+
+def calculate_days_in_month(date_value):
+    """Calculate the number of days in a given month."""
+    last_day_of_month = dt.datetime(
+        date_value.year,
+        date_value.month,
+        calendar.monthrange(date_value.year, date_value.month)[1],
+    )
+    return last_day_of_month.day
+
+
+@task
+def standardize_column_names_task(data_frame):
+    """Task to standardize DataFrame column names to lowercase with underscores."""
+    return standardize_column_names(data_frame)
+
+
+@task
+def format_bus_routes_task(bus_ridership_data):
+    """Task to format bus route strings, capitalizing CityLink routes."""
+    bus_ridership_data["route"] = bus_ridership_data["route"].apply(
+        format_bus_routes
+    )
+    return bus_ridership_data
+
+
+@task
+def convert_date_and_calculate_end_of_month(bus_ridership_data):
+    """Task to convert date column to datetime format and calculate end date of month."""
+    bus_ridership_data["date"] = pd.to_datetime(
+        bus_ridership_data["date"], format="%m/%Y"
+    )
+    bus_ridership_data["end_of_month_date"] = bus_ridership_data[
+        "date"
+    ] + pd.offsets.MonthEnd(0)
+    return bus_ridership_data
+
+
+@task
+def exclude_zero_ridership(bus_ridership_data):
+    """Task to exclude rows with zero ridership."""
+    bus_ridership_data = bus_ridership_data[
+        bus_ridership_data["ridership"] > 0
+    ]
+    return bus_ridership_data
+
+
+@task
+def calculate_days_and_daily_ridership(bus_ridership_data):
+    """Task to calculate number of days in the month and daily ridership."""
+    bus_ridership_data["days_in_month"] = bus_ridership_data["date"].apply(
+        calculate_days_in_month
+    )
+    bus_ridership_data["daily_ridership"] = (
+        bus_ridership_data["ridership"] / bus_ridership_data["days_in_month"]
+    )
+    return bus_ridership_data
