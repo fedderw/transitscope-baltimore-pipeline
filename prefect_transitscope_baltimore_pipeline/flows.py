@@ -4,28 +4,29 @@ import asyncio
 from prefect import flow
 
 from prefect_transitscope_baltimore_pipeline.tasks import (
-    # hello_prefect_transitscope_baltimore_pipeline,
-    # goodbye_prefect_transitscope_baltimore_pipeline,
-    scrape,
-    standardize_column_names_task,
-    format_bus_routes_task,
+    calculate_days_and_daily_ridership,
     convert_date_and_calculate_end_of_month,
     exclude_zero_ridership,
-    calculate_days_and_daily_ridership,
+    format_bus_routes_task,
+    goodbye_prefect_transitscope_baltimore_pipeline,
+    hello_prefect_transitscope_baltimore_pipeline,
+    scrape,
+    standardize_column_names_task,
 )
 
-# @flow
-# def hello_and_goodbye():
-#     """
-#     Sample flow that says hello and goodbye!
-#     """
-#     TransitscopebaltimorepipelineBlock.seed_value_for_example()
-#     block = TransitscopebaltimorepipelineBlock.load("sample-block")
 
-#     print(hello_prefect_transitscope_baltimore_pipeline())
-#     print(f"The block's value: {block.value}")
-#     print(goodbye_prefect_transitscope_baltimore_pipeline())
-#     return "Done"
+@flow
+def hello_and_goodbye():
+    """
+    Sample flow that says hello and goodbye!
+    """
+    # TransitscopebaltimorepipelineBlock.seed_value_for_example()
+    # block = TransitscopebaltimorepipelineBlock.load("sample-block")
+
+    print(hello_prefect_transitscope_baltimore_pipeline())
+    # print(f"The block's value: {block.value}")
+    print(goodbye_prefect_transitscope_baltimore_pipeline())
+    return "Done"
 
 
 @flow

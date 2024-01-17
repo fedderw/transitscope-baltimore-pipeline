@@ -1,13 +1,14 @@
 """This is an example tasks module"""
 import asyncio
-from io import StringIO
+import calendar
+import datetime as dt
 import re
+from io import StringIO
+
 import pandas as pd
 from prefect import task
 from pyppeteer import launch
 from tqdm import tqdm
-import calendar
-import datetime as dt
 
 
 @task
@@ -136,13 +137,11 @@ async def scrape():
                 # Wait for 1 second after clicking the button
                 page.waitFor(500),
                 # page.waitForNavigation(),
-                # page.waitForNavigation({'waitUntil': 'networkidle2', 'timeout': 30000})  # 30 seconds
-                # Just waiting for navigation is not enough, as the page may not be fully loaded. To
+                # page.waitForNavigation({'waitUntil': 'networkidle2', 'timeout': 30000})s
             )
             # navigationPromise = async.ensure_future(page.waitForNavigation())
             # await page.click('a.my-link')  # indirectly cause a navigation
             # await navigationPromise  # wait until navigation finishes
-
             # Concatenating CSV string for each selection
             csvString += await computeCsvStringFromTable(
                 page,
