@@ -93,7 +93,7 @@ def test_computeCsvStringFromTable_with_headers():
     assert result == "header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
 
 
-def test_computeCsvStringFromTable_without_headers():
+async def test_computeCsvStringFromTable_without_headers():
     # Arrange
     mock_page = Mock()
     mock_page.evaluate.return_value = "row1col1,row1col2\nrow2col1,row2col2\n"
@@ -175,8 +175,9 @@ def test_download_mta_bus_stops_failure(mock_requests_get):
 def test_transform_mta_bus_stops():
     test_gdf = gpd.GeoDataFrame(
         {
+            "stop_id": ["1"],
             "geometry": [Point(1, 2)],  # Mock geometry points
-            "routes_served": ["Route1,Route2;Route3"],
+            "routes_served": ["CityLink Gold, BL, 100"],
         }
     )
     result = transform_mta_bus_stops(test_gdf)
