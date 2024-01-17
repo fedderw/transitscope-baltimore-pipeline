@@ -1,16 +1,22 @@
 import datetime as dt
-from unittest.mock import Mock
+from datetime import datetime
+from unittest.mock import Mock, patch
 
+import geopandas as gpd
 import pandas as pd
+import pytest
 from prefect import flow
+from shapely.geometry import Point
 
 from prefect_transitscope_baltimore_pipeline.tasks import (
     calculate_days_in_month,
     computeCsvStringFromTable,
+    download_mta_bus_stops,
     format_bus_routes,
     goodbye_prefect_transitscope_baltimore_pipeline,
     hello_prefect_transitscope_baltimore_pipeline,
     standardize_column_names,
+    transform_mta_bus_stops,
 )
 
 
@@ -135,3 +141,45 @@ def test_calculate_days_in_month():
     date_value = dt.datetime(2020, 2, 15)
     # Assert that the correct number of days is calculated
     assert calculate_days_in_month(date_value) == 29
+
+
+# Mocks
+class MockResponse:
+    @staticmethod
+    def json():
+        return {"description": "Test Description"}
+
+
+# Tests for download_mta_bus_stops function
+@pytest.fixture
+def mock_requests_get():
+    with patch("your_module.requests.get") as mock_get:
+        mock_get.return_value = MockResponse()
+        yield mock_get
+
+
+def test_download_mta_bus_stops_success(mock_requests_get):
+    result = download_mta_bus_stops()
+    assert "Test Description" in result["data_source_description"].values
+
+
+def test_download_mta_bus_stops_failure(mock_requests_get):
+    mock_requests_get.return_value.status_code = 404
+    result = download_mta_bus_stops()
+    assert (
+        "No description available" in result["data_source_description"].values
+    )
+
+
+# Tests for transform_mta_bus_stops function
+def test_transform_mta_bus_stops():
+    test_gdf = gpd.GeoDataFrame(
+        {
+            "geometry": [Point(1, 2)],  # Mock geometry points
+            "routes_served": ["Route1,Route2;Route3"],
+        }
+    )
+    result = transform_mta_bus_stops(test_gdf)
+    assert all(
+        x in result.columns for x in ["latitude", "longitude", "routes_served"]
+    )
