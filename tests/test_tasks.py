@@ -1,3 +1,4 @@
+import asyncio
 import datetime as dt
 from datetime import datetime
 from unittest.mock import Mock, patch
@@ -74,9 +75,16 @@ evaluation_string = r"""(tableSelector, shouldIncludeRowHeaders) => {
 async def test_computeCsvStringFromTable_with_headers():
     # Arrange
     mock_page = Mock()
-    mock_page.evaluate.return_value = (
+    # Create a Future object
+    future = asyncio.Future()
+
+    # Set the result of the Future. This is what will be returned when the Future is awaited.
+    future.set_result(
         r"header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
     )
+
+    # Now, when the mock_page.evaluate function is called, it will return the Future.
+    mock_page.evaluate.return_value = future
     table_selector = "#table"
     should_include_row_headers = True
 
@@ -98,7 +106,16 @@ async def test_computeCsvStringFromTable_with_headers():
 async def test_computeCsvStringFromTable_without_headers():
     # Arrange
     mock_page = Mock()
-    mock_page.evaluate.return_value = r"row1col1,row1col2\nrow2col1,row2col2\n"
+    # Create a Future object
+    future = asyncio.Future()
+
+    # Set the result of the Future. This is what will be returned when the Future is awaited.
+    future.set_result(
+        r"header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
+    )
+
+    # Now, when the mock_page.evaluate function is called, it will return the Future.
+    mock_page.evaluate.return_value = future
     table_selector = "#table"
     should_include_row_headers = False
 
