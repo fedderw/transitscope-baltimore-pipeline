@@ -1,7 +1,7 @@
 import asyncio
 import datetime as dt
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import geopandas as gpd
 import pandas as pd
@@ -164,30 +164,40 @@ def test_calculate_days_in_month():
 
 # Mocks
 class MockResponse:
-    @staticmethod
-    def json():
-        return {"description": "Test Description"}
+    def __init__(self, json_data, status_code):
+        self.json_data = json_data
+        self.status_code = status_code
+
+    def json(self):
+        return self.json_data
 
 
-# Tests for download_mta_bus_stops function
 @pytest.fixture
-def mock_requests_get():
-    with patch(
-        "prefect_transitscope_baltimore_pipeline.tasks.requests.get"
-    ) as mock_get:
-        mock_get.return_value = MockResponse()
-        yield mock_get
+def mock_requests_get(monkeypatch):
+    def mock_get(*args, **kwargs):
+        return MockResponse(
+            {"data_source_description": "Test description"}, 200
+        )
+
+    monkeypatch.setattr("requests.get", mock_get)
+
+
+@pytest.fixture
+def mock_requests_get_failure(monkeypatch):
+    def mock_get(*args, **kwargs):
+        return MockResponse(None, 404)
+
+    monkeypatch.setattr("requests.get", mock_get)
 
 
 def test_download_mta_bus_stops_success(mock_requests_get):
-    result = download_mta_bus_stops.fn()
+    result = download_mta_bus_stops()
     first_description = result["data_source_description"].values[0]
     assert first_description != "No description available"
 
 
-def test_download_mta_bus_stops_failure(mock_requests_get):
-    mock_requests_get.return_value.status_code = 404
-    result = download_mta_bus_stops.fn()
+def test_download_mta_bus_stops_failure(mock_requests_get_failure):
+    result = download_mta_bus_stops()
     first_description = result["data_source_description"].values[0]
     assert first_description == "No description available"
 
