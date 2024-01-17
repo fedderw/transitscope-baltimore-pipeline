@@ -70,7 +70,8 @@ evaluation_string = r"""(tableSelector, shouldIncludeRowHeaders) => {
 }"""
 
 
-def test_computeCsvStringFromTable_with_headers():
+@pytest.mark.asyncio
+async def test_computeCsvStringFromTable_with_headers():
     # Arrange
     mock_page = Mock()
     mock_page.evaluate.return_value = (
