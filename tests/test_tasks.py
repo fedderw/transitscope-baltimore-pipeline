@@ -155,7 +155,9 @@ class MockResponse:
 # Tests for download_mta_bus_stops function
 @pytest.fixture
 def mock_requests_get():
-    with patch("your_module.requests.get") as mock_get:
+    with patch(
+        "prefect_transitscope_baltimore_pipeline.tasks.requests.get"
+    ) as mock_get:
         mock_get.return_value = MockResponse()
         yield mock_get
 
