@@ -75,7 +75,7 @@ async def test_computeCsvStringFromTable_with_headers():
     # Arrange
     mock_page = Mock()
     mock_page.evaluate.return_value = (
-        "header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
+        r"header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
     )
     table_selector = "#table"
     should_include_row_headers = True
@@ -91,14 +91,14 @@ async def test_computeCsvStringFromTable_with_headers():
         table_selector,
         should_include_row_headers,
     )
-    assert result == "header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
+    assert result == r"header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
 
 
 @pytest.mark.asyncio
 async def test_computeCsvStringFromTable_without_headers():
     # Arrange
     mock_page = Mock()
-    mock_page.evaluate.return_value = "row1col1,row1col2\nrow2col1,row2col2\n"
+    mock_page.evaluate.return_value = r"row1col1,row1col2\nrow2col1,row2col2\n"
     table_selector = "#table"
     should_include_row_headers = False
 
@@ -113,7 +113,7 @@ async def test_computeCsvStringFromTable_without_headers():
         table_selector,
         should_include_row_headers,
     )
-    assert result == "row1col1,row1col2\nrow2col1,row2col2\n"
+    assert result == r"row1col1,row1col2\nrow2col1,row2col2\n"
 
 
 # Test for standardize_column_names function
