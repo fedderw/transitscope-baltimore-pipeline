@@ -175,9 +175,7 @@ class MockResponse:
 @pytest.fixture
 def mock_requests_get(monkeypatch):
     def mock_get(*args, **kwargs):
-        return MockResponse(
-            {"data_source_description": "Test description"}, 200
-        )
+        return MockResponse({"description": "Successful description"}, 200)
 
     monkeypatch.setattr("requests.get", mock_get)
 
