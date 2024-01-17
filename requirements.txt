@@ -1,12 +1,8 @@
-cx_Freeze==6.15.12
-griffe==0.38.1
-mkdocs_gen_files==0.5.0
+
 pandas==2.1.4
 prefect==2.14.15
-py2exe==0.13.0.1
 pydantic==2.5.3
 pyppeteer==1.0.2
 pytest==7.4.4
 selenium==4.16.0
 tqdm==4.66.1
-webdriver_manager==4.0.1

@@ -23,7 +23,9 @@ import prefect_transitscope_baltimore_pipeline
 COLLECTION_SLUG = "prefect_transitscope_baltimore_pipeline"
 
 
-def skip_parsing(name: str, obj: Union[ModuleType, Callable], module_nesting: str):
+def skip_parsing(
+    name: str, obj: Union[ModuleType, Callable], module_nesting: str
+):
     """
     Skips parsing the object if it's a private object or if it's not in the
     module nesting, preventing imports from other libraries from being added to the
@@ -71,8 +73,9 @@ def get_code_examples(obj: Union[ModuleType, Callable]) -> Set[str]:
 
 
 code_examples_grouping = defaultdict(set)
-for _, module_name, ispkg in iter_modules(prefect_transitscope_baltimore_pipeline.__path__):
-
+for _, module_name, ispkg in iter_modules(
+    prefect_transitscope_baltimore_pipeline.__path__
+):
     module_nesting = f"{COLLECTION_SLUG}.{module_name}"
     module_obj = load_module(module_nesting)
 
@@ -89,7 +92,9 @@ for _, module_name, ispkg in iter_modules(prefect_transitscope_baltimore_pipelin
         for method_name, method_obj in getmembers(class_obj, isfunction):
             if skip_parsing(method_name, method_obj, module_nesting):
                 continue
-            code_examples_grouping[module_name] |= get_code_examples(method_obj)
+            code_examples_grouping[module_name] |= get_code_examples(
+                method_obj
+            )
 
     # find all function examples
     for function_name, function_obj in getmembers(module_obj, callable):
