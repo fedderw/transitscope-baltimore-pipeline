@@ -178,9 +178,19 @@ def test_download_mta_bus_stops_failure(mock_requests_get):
 def test_transform_mta_bus_stops():
     test_gdf = gpd.GeoDataFrame(
         {
-            "stop_id": ["1"],
-            "geometry": [Point(1, 2)],  # Mock geometry points
+            "objectid": [1],
+            "stop_name": ["Test Stop"],
+            "rider_on": [169.0],
+            "rider_off": [127.0],
+            "rider_total": [297.0],
+            "stop_ridership_rank": [264.0],
             "routes_served": ["CityLink Gold, BL, 100"],
+            "distribution_policy": ["E1 - Public Domain - Internal Use Only"],
+            "mode": ["Bus"],
+            "shelter": ["Yes"],
+            "county": ["Baltimore City"],
+            "stop_id": [1],
+            "geometry": [Point(1, 2)],  # Mock geometry points
         }
     )
     result = transform_mta_bus_stops.fn(test_gdf)
