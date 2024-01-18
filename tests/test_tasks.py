@@ -10,11 +10,13 @@ from prefect import flow
 from shapely.geometry import Point
 
 from prefect_transitscope_baltimore_pipeline.tasks import (
+    calculate_days_and_daily_ridership,
     calculate_days_in_month,
     computeCsvStringFromTable,
     convert_date_and_calculate_end_of_month,
     download_mta_bus_stops,
     evaluation_string,
+    exclude_zero_ridership,
     format_bus_routes,
     format_bus_routes_task,
     goodbye_prefect_transitscope_baltimore_pipeline,
@@ -44,7 +46,7 @@ def goodbye_hello_prefect_transitscope_baltimore_pipeline():
 
 
 # -------------------------------------------------------- #
-#           SECTION test mta bus ridership tasks           #
+#          #SECTION test mta bus ridership tasks           #
 # -------------------------------------------------------- #
 @pytest.mark.asyncio
 async def test_computeCsvStringFromTable_with_headers():
@@ -106,6 +108,33 @@ async def test_computeCsvStringFromTable_without_headers():
     assert result == r"row1col1,row1col2\nrow2col1,row2col2\n"
 
 
+# Mocks
+class MockResponse:
+    def __init__(self, json_data, status_code):
+        self.json_data = json_data
+        self.status_code = status_code
+
+    def json(self):
+        return self.json_data
+
+
+@pytest.fixture
+def mock_requests_get(monkeypatch):
+    def mock_get(*args, **kwargs):
+        return MockResponse({"description": "Successful description"}, 200)
+
+    monkeypatch.setattr("requests.get", mock_get)
+
+
+@pytest.fixture
+def mock_requests_get_failure(monkeypatch):
+    def mock_get(*args, **kwargs):
+        return MockResponse(None, 404)
+
+    monkeypatch.setattr("requests.get", mock_get)
+
+
+# ------ #SECTION: Test route transformation tasks ------ #
 # Test for standardize_column_names function
 def test_standardize_column_names():
     # Create a sample DataFrame
@@ -169,34 +198,48 @@ def test_convert_date_and_calculate_end_of_month():
     )
 
 
-# Mocks
-class MockResponse:
-    def __init__(self, json_data, status_code):
-        self.json_data = json_data
-        self.status_code = status_code
+def test_exclude_zero_ridership():
+    # Create a sample DataFrame with ridership values
+    data = {
+        "route": ["101", "102", "103", "104"],
+        "ridership": [1000, 0, 500, 0],
+    }
+    df = pd.DataFrame(data)
 
-    def json(self):
-        return self.json_data
+    # Exclude rows with zero ridership using the task
+    filtered_df = exclude_zero_ridership.fn(df)
+
+    # Assert that rows with zero ridership are excluded
+    assert len(filtered_df) == 2
+    assert all(filtered_df["ridership"] > 0)
+
+    # Test with an empty DataFrame
+    empty_df = pd.DataFrame(columns=["route", "ridership"])
+    filtered_empty_df = exclude_zero_ridership.fn(empty_df)
+
+    # Assert that the result is an empty DataFrame
+    assert filtered_empty_df.empty
+    assert list(filtered_empty_df.columns) == ["route", "ridership"]
 
 
-@pytest.fixture
-def mock_requests_get(monkeypatch):
-    def mock_get(*args, **kwargs):
-        return MockResponse({"description": "Successful description"}, 200)
-
-    monkeypatch.setattr("requests.get", mock_get)
-
-
-@pytest.fixture
-def mock_requests_get_failure(monkeypatch):
-    def mock_get(*args, **kwargs):
-        return MockResponse(None, 404)
-
-    monkeypatch.setattr("requests.get", mock_get)
+def test_calculate_days_and_daily_ridership():
+    # Create a sample DataFrame with dates and ridership
+    data = {
+        "date": [pd.Timestamp("2023-01-01"), pd.Timestamp("2023-02-01")],
+        "ridership": [3100, 2800],
+    }
+    df = pd.DataFrame(data)
+    # Calculate days in the month and daily ridership using the task
+    processed_df = calculate_days_and_daily_ridership.fn(df)
+    # Assert that the days in the month and daily ridership are calculated correctly
+    assert processed_df["days_in_month"].iloc[0] == 31
+    assert processed_df["daily_ridership"].iloc[0] == 100
+    assert processed_df["days_in_month"].iloc[1] == 28
+    assert processed_df["daily_ridership"].iloc[1] == 100
 
 
 # -------------------------------------------------------- #
-#             SECTION: Test mta bus stops tasks            #
+#             #SECTION: Test mta bus stops tasks           #
 # -------------------------------------------------------- #
 
 
