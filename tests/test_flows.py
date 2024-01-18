@@ -2,10 +2,16 @@ import asyncio
 from unittest.mock import patch
 
 import pandas as pd
+import pytest
 
 from prefect_transitscope_baltimore_pipeline.flows import (
     hello_and_goodbye,
+    mta_bus_stops_flow,
     scrape_and_transform_bus_route_ridership,
+)
+from prefect_transitscope_baltimore_pipeline.tasks import (
+    download_mta_bus_stops,
+    transform_mta_bus_stops,
 )
 
 
@@ -53,3 +59,36 @@ def test_scrape_and_transform_bus_route_ridership(
     mock_convert_date_and_calculate_end_of_month.assert_called_once()
     mock_exclude_zero_ridership.assert_called_once()
     mock_calculate_days_and_daily_ridership.assert_called_once()
+
+
+# Creating a mock function for download_mta_bus_stops
+@pytest.fixture
+def mock_download_mta_bus_stops(monkeypatch):
+    def mock(*args, **kwargs):
+        # Mocked data, can be adjusted as per requirement
+        return "Mocked data for MTA bus stops"
+
+    monkeypatch.setattr(download_mta_bus_stops, "run", mock)
+
+
+# Creating a mock function for transform_mta_bus_stops
+@pytest.fixture
+def mock_transform_mta_bus_stops(monkeypatch):
+    def mock(*args, **kwargs):
+        # Mocked data, can be adjusted as per requirement
+        return "Transformed mocked data for MTA bus stops"
+
+    monkeypatch.setattr(transform_mta_bus_stops, "run", mock)
+
+
+# Unit test for the flow
+def test_mta_bus_stops_flow(
+    mock_download_mta_bus_stops, mock_transform_mta_bus_stops
+):
+    # Run the flow
+    result = mta_bus_stops_flow()
+
+    # Test assertions
+    assert (
+        result == "Transformed mocked data for MTA bus stops"
+    ), "The flow did not return the expected result."
