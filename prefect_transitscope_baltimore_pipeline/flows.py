@@ -1,7 +1,10 @@
 """This is an example flows module"""
 import asyncio
+from pathlib import Path
 
 from prefect import flow
+from prefect_aws import AwsCredentials
+from prefect_aws.s3 import S3Bucket
 
 from prefect_transitscope_baltimore_pipeline.tasks import (
     calculate_days_and_daily_ridership,
@@ -44,6 +47,24 @@ async def scrape_and_transform_bus_route_ridership():
     bus_ridership_data = calculate_days_and_daily_ridership(bus_ridership_data)
     print(bus_ridership_data.head())
 
+    # Write parquet file to local directory
+    bus_ridership_data.to_parquet("data/mta_bus_ridership.parquet")
+    return bus_ridership_data
+
+
+@flow
+def upload_mta_bus_ridership_to_s3():
+    """
+    This function uploads the MTA bus ridership data to an S3 bucket.
+    """
+    aws_credentials_block = AwsCredentials.load("transitscope-aws-credentials")
+    s3_bucket = S3Bucket(
+        bucket_name="transitscope-baltimore",
+        aws_credentials=aws_credentials_block,
+    )
+    path = Path("data/mta_bus_ridership.parquet")
+    s3_bucket.upload_from_path(path, "data/mta_bus_ridership.parquet")
+
 
 @flow
 def mta_bus_stops_flow():
@@ -62,4 +83,5 @@ def mta_bus_stops_flow():
 
 if __name__ == "__main__":
     asyncio.run(scrape_and_transform_bus_route_ridership())
+    upload_mta_bus_ridership_to_s3()
     mta_bus_stops_flow()
