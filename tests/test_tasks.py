@@ -12,12 +12,15 @@ from shapely.geometry import Point
 from prefect_transitscope_baltimore_pipeline.tasks import (
     calculate_days_in_month,
     computeCsvStringFromTable,
+    convert_date_and_calculate_end_of_month,
     download_mta_bus_stops,
     evaluation_string,
     format_bus_routes,
+    format_bus_routes_task,
     goodbye_prefect_transitscope_baltimore_pipeline,
     hello_prefect_transitscope_baltimore_pipeline,
     standardize_column_names,
+    standardize_column_names_task,
     transform_mta_bus_stops,
 )
 
@@ -40,6 +43,9 @@ def goodbye_hello_prefect_transitscope_baltimore_pipeline():
     assert result == "Goodbye, prefect-transitscope-baltimore-pipeline!"
 
 
+# -------------------------------------------------------- #
+#           SECTION test mta bus ridership tasks           #
+# -------------------------------------------------------- #
 @pytest.mark.asyncio
 async def test_computeCsvStringFromTable_with_headers():
     # Arrange
@@ -129,6 +135,40 @@ def test_calculate_days_in_month():
     assert calculate_days_in_month(date_value) == 29
 
 
+def test_standardize_column_names_task():
+    # Create a sample DataFrame
+    data = {"First Name": ["Alice", "Bob"], "Last Name": ["Smith", "Jones"]}
+    df = pd.DataFrame(data)
+    # Standardize column names using the task
+    standardized_df = standardize_column_names_task.fn(df)
+    # Assert that column names are standardized correctly
+    assert list(standardized_df.columns) == ["first_name", "last_name"]
+
+
+def test_format_bus_routes_task():
+    # Create a sample DataFrame with bus routes
+    data = {"route": ["CityLink GOLD, CityLink BLUE, 100"]}
+    df = pd.DataFrame(data)
+    # Format bus routes using the task
+    formatted_df = format_bus_routes_task.fn(df)
+    # Assert that bus routes are formatted correctly
+    expected_output = "CityLink Gold, CityLink Blue, 100"
+    assert formatted_df["route"].iloc[0] == expected_output
+
+
+def test_convert_date_and_calculate_end_of_month():
+    # Create a sample DataFrame with dates
+    data = {"date": ["01/2023"]}
+    df = pd.DataFrame(data)
+    # Convert dates and calculate end of month using the task
+    processed_df = convert_date_and_calculate_end_of_month.fn(df)
+    # Assert that dates are converted and end of month is calculated correctly
+    assert processed_df["date"].iloc[0] == pd.Timestamp("2023-01-01")
+    assert processed_df["end_of_month_date"].iloc[0] == pd.Timestamp(
+        "2023-01-31"
+    )
+
+
 # Mocks
 class MockResponse:
     def __init__(self, json_data, status_code):
@@ -153,6 +193,11 @@ def mock_requests_get_failure(monkeypatch):
         return MockResponse(None, 404)
 
     monkeypatch.setattr("requests.get", mock_get)
+
+
+# -------------------------------------------------------- #
+#             SECTION: Test mta bus stops tasks            #
+# -------------------------------------------------------- #
 
 
 def test_download_mta_bus_stops_success(mock_requests_get):
