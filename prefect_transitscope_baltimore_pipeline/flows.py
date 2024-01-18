@@ -2,9 +2,9 @@
 import asyncio
 from pathlib import Path
 
+import boto3
 from prefect import flow
-from prefect_aws import AwsCredentials
-from prefect_aws.s3 import S3Bucket
+from prefect.blocks.system import Secret
 
 from prefect_transitscope_baltimore_pipeline.tasks import (
     calculate_days_and_daily_ridership,
@@ -53,17 +53,30 @@ async def scrape_and_transform_bus_route_ridership():
 
 
 @flow
-def upload_mta_bus_ridership_to_s3():
+async def upload_mta_bus_ridership_to_s3():
     """
-    This function uploads the MTA bus ridership data to an S3 bucket.
+    This function uploads the MTA bus ridership data to an S3 bucket asynchronously.
     """
-    aws_credentials_block = AwsCredentials.load("transitscope-aws-credentials")
-    s3_bucket = S3Bucket(
-        bucket_name="transitscope-baltimore",
-        aws_credentials=aws_credentials_block,
+    aws_access_key_id_block = await Secret.load("aws-access-key-id")
+    # Access the stored secret
+    aws_access_key_id = aws_access_key_id_block.get()
+    aws_secret_access_key_block = await Secret.load("aws-secret-access-key")
+    # Access the stored secret
+    aws_secret_access_key = aws_secret_access_key_block.get()
+
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
     )
+
+    s3 = session.resource("s3")
     path = Path("data/mta_bus_ridership.parquet")
-    s3_bucket.upload_from_path(path, "data/mta_bus_ridership.parquet")
+    # Upload the parquet file to the S3 bucket
+    s3.meta.client.upload_file(
+        Filename=str(path),
+        Bucket="transitscope-baltimore",
+        Key="data/mta_bus_ridership.parquet",
+    )
 
 
 @flow
@@ -76,12 +89,37 @@ def mta_bus_stops_flow():
 
     # Second task to transform the MTA bus stops data
     transformed_stops = transform_mta_bus_stops(stops)
-
+    transformed_stops.to_parquet("data/mta_bus_stops.parquet")
     print("MTA bus stops data processing complete.")
     return transformed_stops
 
 
+@flow
+async def upload_mta_bus_stops_to_s3():
+    aws_access_key_id_block = await Secret.load("aws-access-key-id")
+    # Access the stored secret
+    aws_access_key_id = aws_access_key_id_block.get()
+    aws_secret_access_key_block = await Secret.load("aws-secret-access-key")
+    # Access the stored secret
+    aws_secret_access_key = aws_secret_access_key_block.get()
+
+    session = boto3.Session(
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
+    )
+
+    s3 = session.resource("s3")
+    path = Path("data/mta_bus_stops.parquet")
+    # Upload the parquet file to the S3 bucket
+    s3.meta.client.upload_file(
+        Filename=str(path),
+        Bucket="transitscope-baltimore",
+        Key="data/mta_bus_stops.parquet",
+    )
+
+
 if __name__ == "__main__":
     asyncio.run(scrape_and_transform_bus_route_ridership())
-    upload_mta_bus_ridership_to_s3()
+    asyncio.run(upload_mta_bus_ridership_to_s3())
     mta_bus_stops_flow()
+    asyncio.run(upload_mta_bus_stops_to_s3())
