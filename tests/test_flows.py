@@ -1,10 +1,12 @@
 import asyncio
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
 from prefect_transitscope_baltimore_pipeline.flows import (
     hello_and_goodbye,
+    mta_bus_stops_flow,
     scrape_and_transform_bus_route_ridership,
 )
 
@@ -53,3 +55,46 @@ def test_scrape_and_transform_bus_route_ridership(
     mock_convert_date_and_calculate_end_of_month.assert_called_once()
     mock_exclude_zero_ridership.assert_called_once()
     mock_calculate_days_and_daily_ridership.assert_called_once()
+
+
+# -------------------------------------------------------- #
+#              #SECTION: test mta bus stops flow             #
+# -------------------------------------------------------- #
+
+
+# Mock function returning a simple DataFrame
+def mock_df(*args, **kwargs):
+    return pd.DataFrame({"mock_column": ["mock_data"]})
+
+
+@pytest.fixture
+def mock_download_mta_bus_stops(monkeypatch):
+    mock = MagicMock(side_effect=mock_df)
+    monkeypatch.setattr(
+        "prefect_transitscope_baltimore_pipeline.tasks.download_mta_bus_stops",
+        mock,
+    )
+    return mock
+
+
+@pytest.fixture
+def mock_transform_mta_bus_stops(monkeypatch):
+    mock = MagicMock(side_effect=mock_df)
+    monkeypatch.setattr(
+        "prefect_transitscope_baltimore_pipeline.tasks.transform_mta_bus_stops",
+        mock,
+    )
+    return mock
+
+
+def test_mta_bus_stops_flow(
+    mock_download_mta_bus_stops, mock_transform_mta_bus_stops
+):
+    # Run the flow
+    result = mta_bus_stops_flow()
+
+    # Test assertions
+    assert isinstance(
+        result, pd.DataFrame
+    ), "The flow did not return a DataFrame."
+    assert not result.empty, "The returned DataFrame is empty."

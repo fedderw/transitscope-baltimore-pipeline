@@ -6,12 +6,14 @@ from prefect import flow
 from prefect_transitscope_baltimore_pipeline.tasks import (
     calculate_days_and_daily_ridership,
     convert_date_and_calculate_end_of_month,
+    download_mta_bus_stops,
     exclude_zero_ridership,
     format_bus_routes_task,
     goodbye_prefect_transitscope_baltimore_pipeline,
     hello_prefect_transitscope_baltimore_pipeline,
     scrape,
     standardize_column_names_task,
+    transform_mta_bus_stops,
 )
 
 
@@ -43,6 +45,21 @@ async def scrape_and_transform_bus_route_ridership():
     print(bus_ridership_data.head())
 
 
+@flow
+def mta_bus_stops_flow():
+    """
+    Flow to process MTA bus stops data.
+    """
+    # First task to download MTA bus stops data
+    stops = download_mta_bus_stops()
+
+    # Second task to transform the MTA bus stops data
+    transformed_stops = transform_mta_bus_stops(stops)
+
+    print("MTA bus stops data processing complete.")
+    return transformed_stops
+
+
 if __name__ == "__main__":
-    # hello_and_goodbye()
     asyncio.run(scrape_and_transform_bus_route_ridership())
+    mta_bus_stops_flow()
