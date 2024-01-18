@@ -3,9 +3,12 @@ import asyncio
 import calendar
 import datetime as dt
 import re
+from datetime import datetime
 from io import StringIO
 
+import geopandas as gpd
 import pandas as pd
+import requests
 from prefect import task
 from pyppeteer import launch
 from tqdm import tqdm
@@ -33,41 +36,47 @@ def goodbye_prefect_transitscope_baltimore_pipeline() -> str:
     return "Goodbye, prefect-transitscope-baltimore-pipeline!"
 
 
+# -------------------------------------------------------- #
+#   Scrape the route ridership data from the MTA website   #
+# -------------------------------------------------------- #
+evaluation_string = r"""(tableSelector, shouldIncludeRowHeaders) => {
+    const table = document.querySelector(tableSelector);
+    if (!table) {
+        return null;
+    }
+
+    let csvString = "";
+    for (let i = 0; i < table.rows.length; i++) {
+        const row = table.rows[i];
+
+        if (!shouldIncludeRowHeaders && i === 0) {
+            continue;
+        }
+
+        for (let j = 0; j < row.cells.length; j++) {
+            const cell = row.cells[j];
+            const formattedCellText = cell.innerText.replace(/\n/g, '\n').trim();
+            if (formattedCellText !== "No Data") {
+                csvString += formattedCellText;
+            }
+
+            if (j === row.cells.length - 1) {
+                csvString += "\n";
+            } else {
+                csvString += ",";
+            }
+        }
+    }
+    return csvString;
+}"""
+
+
 async def computeCsvStringFromTable(
     page, tableSelector, shouldIncludeRowHeaders
 ):
     # Extracting CSV string from a table element
     csvString = await page.evaluate(
-        r"""(tableSelector, shouldIncludeRowHeaders) => {
-        const table = document.querySelector(tableSelector);
-        if (!table) {
-            return null;
-        }
-        
-        let csvString = "";
-        for (let i = 0; i < table.rows.length; i++) {
-            const row = table.rows[i];
-
-            if (!shouldIncludeRowHeaders && i === 0) {
-                continue;
-            }
-
-            for (let j = 0; j < row.cells.length; j++) {
-                const cell = row.cells[j];
-                const formattedCellText = cell.innerText.replace(/\n/g, '\n').trim();
-                if (formattedCellText !== "No Data") {
-                    csvString += formattedCellText;
-                }
-                
-                if (j === row.cells.length - 1) {
-                    csvString += "\n";
-                } else {
-                    csvString += ",";
-                }
-            }
-        }
-        return csvString;
-    }""",
+        evaluation_string,
         tableSelector,
         shouldIncludeRowHeaders,
     )
@@ -165,6 +174,7 @@ async def scrape():
     return df
 
 
+# -------------- Transform the scraped data -------------- #
 def standardize_column_names(data_frame):
     """Standardize DataFrame column names to lowercase with underscores."""
     data_frame.columns = (
@@ -242,3 +252,97 @@ def calculate_days_and_daily_ridership(bus_ridership_data):
         bus_ridership_data["ridership"] / bus_ridership_data["days_in_month"]
     )
     return bus_ridership_data
+
+
+# -------------------------------------------------------- #
+#    SECTION: Request the MTA bus stop data from the API   #
+# -------------------------------------------------------- #
+
+# Dictionary mapping short color codes to their corresponding CityLink route names
+color_to_citylink = {
+    "BL": "CityLink Blue",
+    "BR": "CityLink Brown",
+    "CityLink BLUE": "CityLink Blue",
+    "CityLink NAVY": "CityLink Navy",
+    "CityLink ORANGE": "CityLink Orange",
+    "CityLink RED": "CityLink Red",
+    "CityLink SILVER": "CityLink Silver",
+    "GD": "CityLink Gold",
+    "GR": "CityLink Green",
+    "LM": "CityLink Lime",
+    "NV": "CityLink Navy",
+    "OR": "CityLink Orange",
+    "PK": "CityLink Pink",
+    "PR": "CityLink Purple",
+    "RD": "CityLink Red",
+    "SV": "CityLink Silver",
+    "YW": "CityLink Yellow",
+}
+
+
+# Function to map colors to their full names, keeping unmatched values
+def map_color_to_citylink(color):
+    """
+    The function `map_color_to_citylink` maps a color to a corresponding citylink or returns the color
+    itself if no mapping is found.
+
+    :param color: The color parameter is a string representing a color
+    :return: the value associated with the given color in the `color_to_citylink` dictionary. If the
+    color is not found in the dictionary, it will return the color itself.
+    """
+    return color_to_citylink.get(color, color)
+
+
+# Function to download MTA bus stops data
+@task
+def download_mta_bus_stops():
+    metadata_url = "https://geodata.md.gov/imap/rest/services/Transportation/MD_Transit/FeatureServer/9?f=pjson"
+    metadata_response = requests.get(metadata_url)
+    if metadata_response.status_code == 200:
+        description = metadata_response.json().get(
+            "description", "No description available"
+        )
+        print("Description from Metadata:", description)
+    else:
+        print("Failed to retrieve metadata")
+        description = "No description available"
+
+    stops = gpd.read_file(
+        "https://geodata.md.gov/imap/rest/services/Transportation/MD_Transit/FeatureServer/9/query?where=1%3D1&outFields=*&outSR=4326&f=geojson"
+    )
+    stops = standardize_column_names(stops)
+    stops["data_source_description"] = description
+    stops["download_date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return stops
+
+
+@task
+def transform_mta_bus_stops(gdf):
+    gdf["latitude"] = gdf["geometry"].y
+    gdf["longitude"] = gdf["geometry"].x
+    route_stop = gdf[["stop_id", "routes_served"]].copy()
+
+    # We need to split on commas and semicolons
+    route_stop["routes_served"] = route_stop["routes_served"].str.split(",")
+    route_stop = route_stop.explode("routes_served")
+    # Split on semicolons
+    route_stop["routes_served"] = route_stop["routes_served"].str.split(";")
+    route_stop = route_stop.explode("routes_served")
+    route_stop["routes_served"] = route_stop["routes_served"].str.strip()
+    # Apply the function to the 'routes_served' column
+    route_stop["routes_served"] = route_stop["routes_served"].apply(
+        map_color_to_citylink
+    )
+    # Re-join the routes served by stop into a df with one row per stop: route_stop, routes_served
+    route_stop = (
+        route_stop.groupby("stop_id")["routes_served"]
+        .apply(list)
+        .reset_index()
+    )
+    # Drop routes_served from the original gdf
+    gdf = gdf.drop(columns=["routes_served"])
+    # Merge the routes served by stop back into the original gdf
+    gdf = gdf.merge(route_stop, on="stop_id", how="left")
+    # Shift routes_served to position 6
+    gdf.insert(6, "routes_served", gdf.pop("routes_served"))
+    return gdf
