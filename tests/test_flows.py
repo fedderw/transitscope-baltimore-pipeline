@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -8,10 +8,6 @@ from prefect_transitscope_baltimore_pipeline.flows import (
     hello_and_goodbye,
     mta_bus_stops_flow,
     scrape_and_transform_bus_route_ridership,
-)
-from prefect_transitscope_baltimore_pipeline.tasks import (
-    download_mta_bus_stops,
-    transform_mta_bus_stops,
 )
 
 
@@ -61,27 +57,36 @@ def test_scrape_and_transform_bus_route_ridership(
     mock_calculate_days_and_daily_ridership.assert_called_once()
 
 
-# Creating a mock function for download_mta_bus_stops
+# -------------------------------------------------------- #
+#              #SECTION: test mta bus stops flow             #
+# -------------------------------------------------------- #
+
+
+# Mock function returning a simple DataFrame
+def mock_df(*args, **kwargs):
+    return pd.DataFrame({"mock_column": ["mock_data"]})
+
+
 @pytest.fixture
 def mock_download_mta_bus_stops(monkeypatch):
-    def mock(*args, **kwargs):
-        # Mocked data, can be adjusted as per requirement
-        return "Mocked data for MTA bus stops"
+    mock = MagicMock(side_effect=mock_df)
+    monkeypatch.setattr(
+        "prefect_transitscope_baltimore_pipeline.tasks.download_mta_bus_stops",
+        mock,
+    )
+    return mock
 
-    monkeypatch.setattr(download_mta_bus_stops, "run", mock)
 
-
-# Creating a mock function for transform_mta_bus_stops
 @pytest.fixture
 def mock_transform_mta_bus_stops(monkeypatch):
-    def mock(*args, **kwargs):
-        # Mocked data, can be adjusted as per requirement
-        return "Transformed mocked data for MTA bus stops"
+    mock = MagicMock(side_effect=mock_df)
+    monkeypatch.setattr(
+        "prefect_transitscope_baltimore_pipeline.tasks.transform_mta_bus_stops",
+        mock,
+    )
+    return mock
 
-    monkeypatch.setattr(transform_mta_bus_stops, "run", mock)
 
-
-# Unit test for the flow
 def test_mta_bus_stops_flow(
     mock_download_mta_bus_stops, mock_transform_mta_bus_stops
 ):
@@ -89,6 +94,7 @@ def test_mta_bus_stops_flow(
     result = mta_bus_stops_flow()
 
     # Test assertions
-    assert (
-        result == "Transformed mocked data for MTA bus stops"
-    ), "The flow did not return the expected result."
+    assert isinstance(
+        result, pd.DataFrame
+    ), "The flow did not return a DataFrame."
+    assert not result.empty, "The returned DataFrame is empty."
