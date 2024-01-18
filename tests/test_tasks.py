@@ -13,6 +13,7 @@ from prefect_transitscope_baltimore_pipeline.tasks import (
     calculate_days_in_month,
     computeCsvStringFromTable,
     download_mta_bus_stops,
+    evaluation_string,
     format_bus_routes,
     goodbye_prefect_transitscope_baltimore_pipeline,
     hello_prefect_transitscope_baltimore_pipeline,
@@ -37,38 +38,6 @@ def goodbye_hello_prefect_transitscope_baltimore_pipeline():
 
     result = test_flow()
     assert result == "Goodbye, prefect-transitscope-baltimore-pipeline!"
-
-
-evaluation_string = r"""(tableSelector, shouldIncludeRowHeaders) => {
-    const table = document.querySelector(tableSelector);
-    if (!table) {
-        return null;
-    }
-
-    let csvString = "";
-    for (let i = 0; i < table.rows.length; i++) {
-        const row = table.rows[i];
-
-        if (!shouldIncludeRowHeaders && i === 0) {
-            continue;
-        }
-
-        for (let j = 0; j < row.cells.length; j++) {
-            const cell = row.cells[j];
-            const formattedCellText = cell.innerText.replace(/\n/g, '\n').trim();
-            if (formattedCellText !== "No Data") {
-                csvString += formattedCellText;
-            }
-
-            if (j === row.cells.length - 1) {
-                csvString += "\n";
-            } else {
-                csvString += ",";
-            }
-        }
-    }
-    return csvString;
-}"""
 
 
 @pytest.mark.asyncio
@@ -110,9 +79,7 @@ async def test_computeCsvStringFromTable_without_headers():
     future = asyncio.Future()
 
     # Set the result of the Future. This is what will be returned when the Future is awaited.
-    future.set_result(
-        r"header1,header2\nrow1col1,row1col2\nrow2col1,row2col2\n"
-    )
+    future.set_result(r"row1col1,row1col2\nrow2col1,row2col2\n")
 
     # Now, when the mock_page.evaluate function is called, it will return the Future.
     mock_page.evaluate.return_value = future

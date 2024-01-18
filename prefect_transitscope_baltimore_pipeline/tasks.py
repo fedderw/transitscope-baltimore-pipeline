@@ -39,41 +39,44 @@ def goodbye_prefect_transitscope_baltimore_pipeline() -> str:
 # -------------------------------------------------------- #
 #   Scrape the route ridership data from the MTA website   #
 # -------------------------------------------------------- #
+evaluation_string = r"""(tableSelector, shouldIncludeRowHeaders) => {
+    const table = document.querySelector(tableSelector);
+    if (!table) {
+        return null;
+    }
+
+    let csvString = "";
+    for (let i = 0; i < table.rows.length; i++) {
+        const row = table.rows[i];
+
+        if (!shouldIncludeRowHeaders && i === 0) {
+            continue;
+        }
+
+        for (let j = 0; j < row.cells.length; j++) {
+            const cell = row.cells[j];
+            const formattedCellText = cell.innerText.replace(/\n/g, '\n').trim();
+            if (formattedCellText !== "No Data") {
+                csvString += formattedCellText;
+            }
+
+            if (j === row.cells.length - 1) {
+                csvString += "\n";
+            } else {
+                csvString += ",";
+            }
+        }
+    }
+    return csvString;
+}"""
+
+
 async def computeCsvStringFromTable(
     page, tableSelector, shouldIncludeRowHeaders
 ):
     # Extracting CSV string from a table element
     csvString = await page.evaluate(
-        r"""(tableSelector, shouldIncludeRowHeaders) => {
-        const table = document.querySelector(tableSelector);
-        if (!table) {
-            return null;
-        }
-        
-        let csvString = "";
-        for (let i = 0; i < table.rows.length; i++) {
-            const row = table.rows[i];
-
-            if (!shouldIncludeRowHeaders && i === 0) {
-                continue;
-            }
-
-            for (let j = 0; j < row.cells.length; j++) {
-                const cell = row.cells[j];
-                const formattedCellText = cell.innerText.replace(/\n/g, '\n').trim();
-                if (formattedCellText !== "No Data") {
-                    csvString += formattedCellText;
-                }
-                
-                if (j === row.cells.length - 1) {
-                    csvString += "\n";
-                } else {
-                    csvString += ",";
-                }
-            }
-        }
-        return csvString;
-    }""",
+        evaluation_string,
         tableSelector,
         shouldIncludeRowHeaders,
     )
