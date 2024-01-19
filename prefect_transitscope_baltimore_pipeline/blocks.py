@@ -1,8 +1,11 @@
 """This is an example blocks module"""
+from prefect import Task
 
-from prefect.blocks.core import Block
 
+class PrintMessageBlock(Task):
+    def __init__(self, message: str = "Hello, World!", **kwargs):
+        self.message = message
+        super().__init__(**kwargs)
 
-class TransitscopebaltimorepipelineBlock(Block):
-    # Empty class for now
-    pass
+    def run(self):
+        print(self.message)
