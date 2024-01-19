@@ -296,6 +296,18 @@ def map_color_to_citylink(color):
 # Function to download MTA bus stops data
 @task
 def download_mta_bus_stops():
+    """
+    Downloads and processes data for MTA bus stops in Maryland.
+
+    This function retrieves the metadata from the Maryland Transit FeatureServer,
+    extracting the description of the data. It then downloads the MTA bus stops data
+    in GeoJSON format, standardizes the column names, adds a description from the metadata,
+    and appends the current download date and time to each record.
+
+    Returns:
+        GeoDataFrame: A GeoDataFrame containing the MTA bus stops data with standardized
+        column names, the data source description, and the download date and time.
+    """
     metadata_url = "https://geodata.md.gov/imap/rest/services/Transportation/MD_Transit/FeatureServer/9?f=pjson"
     metadata_response = requests.get(metadata_url)
     if metadata_response.status_code == 200:
@@ -318,6 +330,26 @@ def download_mta_bus_stops():
 
 @task
 def transform_mta_bus_stops(gdf):
+    """
+    Transforms a GeoDataFrame containing MTA bus stops data.
+
+    This function performs several transformations on the MTA bus stops data:
+    - Extracts latitude and longitude from the 'geometry' field.
+    - Processes the 'routes_served' field to standardize route information. This involves
+      splitting the routes on commas and semicolons, mapping each route to a color using
+      the 'map_color_to_citylink' function, and consolidating routes served per stop.
+    - Rearranges the columns, placing 'routes_served' into a specific position.
+
+    Parameters:
+        gdf (GeoDataFrame): A GeoDataFrame containing MTA bus stops data with fields
+                            including 'geometry' and 'routes_served'.
+
+    Returns:
+        GeoDataFrame: The transformed GeoDataFrame with additional latitude and longitude
+                      fields, and a modified 'routes_served' field reflecting individual
+                      routes served per bus stop.
+    """
+
     gdf["latitude"] = gdf["geometry"].y
     gdf["longitude"] = gdf["geometry"].x
     route_stop = gdf[["stop_id", "routes_served"]].copy()
