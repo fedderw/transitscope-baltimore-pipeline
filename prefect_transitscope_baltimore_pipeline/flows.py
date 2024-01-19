@@ -36,6 +36,21 @@ def hello_and_goodbye():
 
 @flow
 async def scrape_and_transform_bus_route_ridership():
+    """
+    This is an asynchronous function that scrapes bus ridership data, transforms it, and writes it to a parquet file.
+
+    The function performs the following steps:
+    1. Scrapes the data
+    2. Standardizes the column names
+    3. Formats the bus routes
+    4. Converts the date and calculates the end of the month
+    5. Excludes zero ridership
+    6. Calculates the days and daily ridership
+    7. Writes the transformed data to a parquet file
+
+    Returns:
+        DataFrame: The transformed bus ridership data.
+    """
     # Executing the main function
     bus_ridership_data = await scrape()
     bus_ridership_data = standardize_column_names_task(bus_ridership_data)
@@ -55,7 +70,16 @@ async def scrape_and_transform_bus_route_ridership():
 @flow
 async def upload_mta_bus_ridership_to_s3():
     """
-    This function uploads the MTA bus ridership data to an S3 bucket asynchronously.
+    This is an asynchronous function that uploads the MTA bus ridership data to an S3 bucket.
+
+    The function performs the following steps:
+    1. Loads the AWS access key ID and secret access key from secrets
+    2. Creates a session with AWS using the loaded credentials
+    3. Creates an S3 resource object using the session
+    4. Uploads the MTA bus ridership data (in parquet format) to the specified S3 bucket
+
+    Returns:
+        None
     """
     aws_access_key_id_block = await Secret.load("aws-access-key-id")
     # Access the stored secret
@@ -82,7 +106,16 @@ async def upload_mta_bus_ridership_to_s3():
 @flow
 def mta_bus_stops_flow():
     """
-    Flow to process MTA bus stops data.
+    This is an asynchronous function that uploads the MTA bus ridership data to an S3 bucket.
+
+    The function performs the following steps:
+    1. Loads the AWS access key ID and secret access key from secrets
+    2. Creates a session with AWS using the loaded credentials
+    3. Creates an S3 resource object using the session
+    4. Uploads the MTA bus ridership data (in parquet format) to the specified S3 bucket
+
+    Returns:
+        None
     """
     # First task to download MTA bus stops data
     stops = download_mta_bus_stops()
@@ -96,6 +129,18 @@ def mta_bus_stops_flow():
 
 @flow
 async def upload_mta_bus_stops_to_s3():
+    """
+    This is an asynchronous function that uploads the MTA bus stops data to an S3 bucket.
+
+    The function performs the following steps:
+    1. Loads the AWS access key ID and secret access key from secrets
+    2. Creates a session with AWS using the loaded credentials
+    3. Creates an S3 resource object using the session
+    4. Uploads the MTA bus stops data (in parquet format) to the specified S3 bucket
+
+    Returns:
+        None
+    """
     aws_access_key_id_block = await Secret.load("aws-access-key-id")
     # Access the stored secret
     aws_access_key_id = aws_access_key_id_block.get()
