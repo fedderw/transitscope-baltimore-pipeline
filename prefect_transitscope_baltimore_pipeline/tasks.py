@@ -339,6 +339,8 @@ def transform_mta_bus_stops(gdf):
         .apply(list)
         .reset_index()
     )
+    # Remove the brackets from the list of routes served
+    route_stop["routes_served"] = route_stop["routes_served"].str.strip("[]")
     # Drop routes_served from the original gdf
     gdf = gdf.drop(columns=["routes_served"])
     # Merge the routes served by stop back into the original gdf
