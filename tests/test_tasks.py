@@ -10,12 +10,12 @@ from prefect import flow
 from shapely.geometry import Point
 
 from prefect_transitscope_baltimore_pipeline.tasks import (
+    EVALUATION_STRING,
     calculate_days_and_daily_ridership,
     calculate_days_in_month,
     computeCsvStringFromTable,
     convert_date_and_calculate_end_of_month,
     download_mta_bus_stops,
-    evaluation_string,
     exclude_zero_ridership,
     format_bus_routes,
     format_bus_routes_task,
@@ -72,7 +72,7 @@ async def test_computeCsvStringFromTable_with_headers():
 
     # Assert
     mock_page.evaluate.assert_called_once_with(
-        evaluation_string,  # The JavaScript function is the docstring of the Python function
+        EVALUATION_STRING,  # The JavaScript function is the docstring of the Python function
         table_selector,
         should_include_row_headers,
     )
@@ -101,7 +101,7 @@ async def test_computeCsvStringFromTable_without_headers():
 
     # Assert
     mock_page.evaluate.assert_called_once_with(
-        evaluation_string,  # The JavaScript function is the docstring of the Python function
+        EVALUATION_STRING,  # The JavaScript function is the docstring of the Python function
         table_selector,
         should_include_row_headers,
     )

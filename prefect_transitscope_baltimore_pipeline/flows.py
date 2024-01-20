@@ -12,8 +12,6 @@ from prefect_transitscope_baltimore_pipeline.tasks import (
     download_mta_bus_stops,
     exclude_zero_ridership,
     format_bus_routes_task,
-    goodbye_prefect_transitscope_baltimore_pipeline,
-    hello_prefect_transitscope_baltimore_pipeline,
     scrape,
     standardize_column_names_task,
     transform_mta_bus_stops,
@@ -21,23 +19,10 @@ from prefect_transitscope_baltimore_pipeline.tasks import (
 
 
 @flow
-def hello_and_goodbye():
-    """
-    Sample flow that says hello and goodbye!
-    """
-    # TransitscopebaltimorepipelineBlock.seed_value_for_example()
-    # block = TransitscopebaltimorepipelineBlock.load("sample-block")
-
-    print(hello_prefect_transitscope_baltimore_pipeline())
-    # print(f"The block's value: {block.value}")
-    print(goodbye_prefect_transitscope_baltimore_pipeline())
-    return "Done"
-
-
-@flow
 async def scrape_and_transform_bus_route_ridership():
     """
-    This is an asynchronous function that scrapes bus ridership data, transforms it, and writes it to a parquet file.
+    This is an asynchronous function that scrapes bus ridership data,
+    transforms it, and writes it to a parquet file.
 
     The function performs the following steps:
     1. Scrapes the data
@@ -161,6 +146,31 @@ async def upload_mta_bus_stops_to_s3():
         Bucket="transitscope-baltimore",
         Key="data/mta_bus_stops.parquet",
     )
+
+
+@flow
+async def run_all_prefect_transitscope_baltimore_pipeline_flows():
+    """
+    This is an asynchronous function that runs all the flows in the module.
+
+    The function performs the following steps:
+    1. Runs the scrape_and_transform_bus_route_ridership flow
+    2. Runs the upload_mta_bus_ridership_to_s3 flow
+    3. Runs the mta_bus_stops_flow flow
+    4. Runs the upload_mta_bus_stops_to_s3 flow
+
+    Returns:
+        None
+    """
+    await scrape_and_transform_bus_route_ridership()
+    await upload_mta_bus_ridership_to_s3()
+    mta_bus_stops_flow()
+    await upload_mta_bus_stops_to_s3()
+    print("All flows completed successfully.")
+    return None
+    # return scrape_and_transform_bus_route_ridership()
+    # return upload_mta_bus_ridership_to_s3()
+    # return mta_bus_stops_flow()
 
 
 if __name__ == "__main__":
