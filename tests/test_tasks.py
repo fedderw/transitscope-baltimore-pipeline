@@ -6,43 +6,22 @@ from unittest.mock import Mock
 import geopandas as gpd
 import pandas as pd
 import pytest
-from prefect import flow
 from shapely.geometry import Point
 
 from prefect_transitscope_baltimore_pipeline.tasks import (
+    EVALUATION_STRING,
     calculate_days_and_daily_ridership,
     calculate_days_in_month,
     computeCsvStringFromTable,
     convert_date_and_calculate_end_of_month,
     download_mta_bus_stops,
-    evaluation_string,
     exclude_zero_ridership,
     format_bus_routes,
     format_bus_routes_task,
-    goodbye_prefect_transitscope_baltimore_pipeline,
-    hello_prefect_transitscope_baltimore_pipeline,
     standardize_column_names,
     standardize_column_names_task,
     transform_mta_bus_stops,
 )
-
-
-def test_hello_prefect_transitscope_baltimore_pipeline():
-    @flow
-    def test_flow():
-        return hello_prefect_transitscope_baltimore_pipeline()
-
-    result = test_flow()
-    assert result == "Hello, prefect-transitscope-baltimore-pipeline!"
-
-
-def goodbye_hello_prefect_transitscope_baltimore_pipeline():
-    @flow
-    def test_flow():
-        return goodbye_prefect_transitscope_baltimore_pipeline()
-
-    result = test_flow()
-    assert result == "Goodbye, prefect-transitscope-baltimore-pipeline!"
 
 
 # -------------------------------------------------------- #
@@ -72,7 +51,7 @@ async def test_computeCsvStringFromTable_with_headers():
 
     # Assert
     mock_page.evaluate.assert_called_once_with(
-        evaluation_string,  # The JavaScript function is the docstring of the Python function
+        EVALUATION_STRING,  # The JavaScript function is the docstring of the Python function
         table_selector,
         should_include_row_headers,
     )
@@ -101,7 +80,7 @@ async def test_computeCsvStringFromTable_without_headers():
 
     # Assert
     mock_page.evaluate.assert_called_once_with(
-        evaluation_string,  # The JavaScript function is the docstring of the Python function
+        EVALUATION_STRING,  # The JavaScript function is the docstring of the Python function
         table_selector,
         should_include_row_headers,
     )

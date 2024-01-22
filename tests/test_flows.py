@@ -5,15 +5,9 @@ import pandas as pd
 import pytest
 
 from prefect_transitscope_baltimore_pipeline.flows import (
-    hello_and_goodbye,
     mta_bus_stops_flow,
     scrape_and_transform_bus_route_ridership,
 )
-
-
-def test_hello_and_goodbye_flow():
-    result = hello_and_goodbye()
-    assert result == "Done"
 
 
 @patch("prefect_transitscope_baltimore_pipeline.flows.scrape")

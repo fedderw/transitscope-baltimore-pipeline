@@ -1,0 +1,53 @@
+###
+### A complete description of a Prefect Deployment for flow 'run-all-prefect-transitscope-baltimore-pipeline-flows'
+###
+name: transitscope-baltimore-deployment
+description: |-
+  This is an asynchronous function that runs all the flows in the module.
+
+  The function performs the following steps:
+  1. Runs the scrape_and_transform_bus_route_ridership flow
+  2. Runs the upload_mta_bus_ridership_to_s3 flow
+  3. Runs the mta_bus_stops_flow flow
+  4. Runs the upload_mta_bus_stops_to_s3 flow
+
+  Returns:
+      None
+version: c92ccca638a1dc5655b2fc71ce1fe925
+# The work queue that will handle this deployment's runs
+work_queue_name: default
+work_pool_name: null
+tags: []
+parameters: {}
+schedule:
+  cron: "0 12 * * 1"
+is_schedule_active: null
+infra_overrides: {}
+infrastructure:
+  type: process
+  env: {}
+  labels: {}
+  name: null
+  command: null
+  stream_output: true
+  working_dir: null
+  block_type_slug: process
+  _block_type_slug: process
+
+###
+### DO NOT EDIT BELOW THIS LINE
+###
+flow_name: run-all-prefect-transitscope-baltimore-pipeline-flows
+manifest_path: null
+storage: null
+path: /workspaces/transitscope-baltimore-pipeline
+entrypoint: prefect_transitscope_baltimore_pipeline/flows.py:run_all_prefect_transitscope_baltimore_pipeline_flows
+parameter_openapi_schema:
+  title: Parameters
+  type: object
+  properties: {}
+  required: null
+  definitions: null
+timestamp: '2024-01-19T06:04:10.793352+00:00'
+triggers: []
+enforce_parameter_schema: null

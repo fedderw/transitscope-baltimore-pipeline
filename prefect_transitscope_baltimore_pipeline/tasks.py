@@ -13,33 +13,10 @@ from prefect import task
 from pyppeteer import launch
 from tqdm import tqdm
 
-
-@task
-def hello_prefect_transitscope_baltimore_pipeline() -> str:
-    """
-    Sample task that says hello!
-
-    Returns:
-        A greeting for your collection
-    """
-    return "Hello, prefect-transitscope-baltimore-pipeline!"
-
-
-@task
-def goodbye_prefect_transitscope_baltimore_pipeline() -> str:
-    """
-    Sample task that says goodbye!
-
-    Returns:
-        A farewell for your collection
-    """
-    return "Goodbye, prefect-transitscope-baltimore-pipeline!"
-
-
 # -------------------------------------------------------- #
 #   Scrape the route ridership data from the MTA website   #
 # -------------------------------------------------------- #
-evaluation_string = r"""(tableSelector, shouldIncludeRowHeaders) => {
+EVALUATION_STRING = r"""(tableSelector, shouldIncludeRowHeaders) => {
     const table = document.querySelector(tableSelector);
     if (!table) {
         return null;
@@ -74,18 +51,32 @@ evaluation_string = r"""(tableSelector, shouldIncludeRowHeaders) => {
 async def computeCsvStringFromTable(
     page, tableSelector, shouldIncludeRowHeaders
 ):
-    # Extracting CSV string from a table element
-    csvString = await page.evaluate(
-        evaluation_string,
+    return await page.evaluate(
+        EVALUATION_STRING,
         tableSelector,
         shouldIncludeRowHeaders,
     )
 
-    return csvString
-
 
 @task
 async def scrape():
+    """
+    Scrape data from the MTA Maryland Performance Improvement website and return it as a pandas DataFrame.
+
+    Returns:
+        pandas.DataFrame: The scraped data as a DataFrame with columns: 'Date', 'Route', and 'Ridership'.
+
+    Examples:
+        >>> df = await scrape()
+        >>> print(df.head())
+             Date  Route  Ridership
+        0  01/2023    103       3916
+        1  01/2023    105       3530
+        2  01/2023    115       4179
+        3  01/2023    120       3887
+        4  01/2023    150       1833
+    """
+
     # Launching the browser and setting up a new page
     browser = await launch(
         handleSIGINT=False, handleSIGTERM=False, handleSIGHUP=False
@@ -296,8 +287,20 @@ def map_color_to_citylink(color):
 # Function to download MTA bus stops data
 @task
 def download_mta_bus_stops():
+    """
+    Downloads and processes data for MTA bus stops in Maryland.
+
+    This function retrieves the metadata from the Maryland Transit FeatureServer,
+    extracting the description of the data. It then downloads the MTA bus stops data
+    in GeoJSON format, standardizes the column names, adds a description from the metadata,
+    and appends the current download date and time to each record.
+
+    Returns:
+        GeoDataFrame: A GeoDataFrame containing the MTA bus stops data with standardized
+        column names, the data source description, and the download date and time.
+    """
     metadata_url = "https://geodata.md.gov/imap/rest/services/Transportation/MD_Transit/FeatureServer/9?f=pjson"
-    metadata_response = requests.get(metadata_url)
+    metadata_response = requests.get(metadata_url, timeout=10)
     if metadata_response.status_code == 200:
         description = metadata_response.json().get(
             "description", "No description available"
@@ -318,6 +321,25 @@ def download_mta_bus_stops():
 
 @task
 def transform_mta_bus_stops(gdf):
+    """
+    Transforms a GeoDataFrame containing MTA bus stops data.
+
+    This function performs several transformations on the MTA bus stops data:
+
+    - Extracts latitude and longitude from the 'geometry' field.
+    - Processes the 'routes_served' field to standardize route information. This involves splitting the routes on commas and semicolons, mapping each route to a color using the 'map_color_to_citylink' function, and consolidating routes served per stop.
+    - Rearranges the columns, placing 'routes_served' into a specific position.
+
+    Parameters:
+        gdf (GeoDataFrame): A GeoDataFrame containing MTA bus stops data with fields including 'geometry' and 'routes_served'.
+
+    Returns:
+        GeoDataFrame: The transformed GeoDataFrame with additional latitude and longitude fields, and a modified 'routes_served' field reflecting individual routes served per bus stop.
+
+    Raises:
+        Any exceptions raised by the function are not explicitly mentioned in the docstring.
+    """
+
     gdf["latitude"] = gdf["geometry"].y
     gdf["longitude"] = gdf["geometry"].x
     route_stop = gdf[["stop_id", "routes_served"]].copy()
@@ -339,6 +361,8 @@ def transform_mta_bus_stops(gdf):
         .apply(list)
         .reset_index()
     )
+    # Remove the brackets from the list of routes served
+    route_stop["routes_served"] = route_stop["routes_served"].str.strip("[]")
     # Drop routes_served from the original gdf
     gdf = gdf.drop(columns=["routes_served"])
     # Merge the routes served by stop back into the original gdf
