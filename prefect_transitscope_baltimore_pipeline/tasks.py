@@ -300,7 +300,7 @@ def download_mta_bus_stops():
         column names, the data source description, and the download date and time.
     """
     metadata_url = "https://geodata.md.gov/imap/rest/services/Transportation/MD_Transit/FeatureServer/9?f=pjson"
-    metadata_response = requests.get(metadata_url)
+    metadata_response = requests.get(metadata_url, timeout=10)
     if metadata_response.status_code == 200:
         description = metadata_response.json().get(
             "description", "No description available"

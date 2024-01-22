@@ -115,23 +115,10 @@ def mta_bus_stops_flow():
 @flow
 async def upload_mta_bus_stops_to_s3():
     """
-    This is an asynchronous function that uploads the MTA bus stops data to an S3 bucket.
-
-    The function performs the following steps:
-    1. Loads the AWS access key ID and secret access key from secrets
-    2. Creates a session with AWS using the loaded credentials
-    3. Creates an S3 resource object using the session
-    4. Uploads the MTA bus stops data (in parquet format) to the specified S3 bucket
-
-    Returns:
-        None
+    Asynchronous function to upload MTA bus stops data to an S3 bucket.
     """
-    aws_access_key_id_block = await Secret.load("aws-access-key-id")
-    # Access the stored secret
-    aws_access_key_id = aws_access_key_id_block.get()
-    aws_secret_access_key_block = await Secret.load("aws-secret-access-key")
-    # Access the stored secret
-    aws_secret_access_key = aws_secret_access_key_block.get()
+    aws_access_key_id = await Secret.load("aws-access-key-id").get()
+    aws_secret_access_key = await Secret.load("aws-secret-access-key").get()
 
     session = boto3.Session(
         aws_access_key_id=aws_access_key_id,
@@ -140,9 +127,8 @@ async def upload_mta_bus_stops_to_s3():
 
     s3 = session.resource("s3")
     path = Path("data/mta_bus_stops.parquet")
-    # Upload the parquet file to the S3 bucket
     s3.meta.client.upload_file(
-        Filename=str(path),
+        Filename=path,
         Bucket="transitscope-baltimore",
         Key="data/mta_bus_stops.parquet",
     )
