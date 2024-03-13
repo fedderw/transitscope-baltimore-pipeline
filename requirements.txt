@@ -1,7 +1,7 @@
 
 pandas>=2.0.0
 prefect==2.14.15
-pydantic==2.5.3
+pydantic==2.6.4
 pyppeteer==1.0.2
 pytest==7.4.4
 selenium==4.16.0
